@@ -516,6 +516,11 @@ func applyUpdatedMonitorToState(
 	out.Name = types.StringValue(unescapeHTML(m.Name))
 	out.URL = types.StringValue(unescapeHTML(m.URL))
 	out.Status = prev.Status
+	if strings.ToUpper(plan.Type.ValueString()) == MonitorTypeHEARTBEAT {
+		out.HeartbeatURL = types.StringValue(m.APIKey)
+	} else {
+		out.HeartbeatURL = types.StringNull()
+	}
 	if !plan.IsPaused.IsNull() && !plan.IsPaused.IsUnknown() {
 		out.IsPaused = types.BoolValue(isMonitorPausedStatus(m.Status))
 	} else {

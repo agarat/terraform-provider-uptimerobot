@@ -186,9 +186,11 @@ func (r *monitorResource) buildCreateRequest(
 ) (*client.CreateMonitorRequest, string) {
 	req := &client.CreateMonitorRequest{
 		Type:     client.MonitorType(plan.Type.ValueString()),
-		URL:      unescapeHTML(plan.URL.ValueString()),
 		Name:     unescapeHTML(plan.Name.ValueString()),
 		Interval: int(plan.Interval.ValueInt64()),
+	}
+	if !plan.URL.IsNull() && !plan.URL.IsUnknown() {
+		req.URL = unescapeHTML(plan.URL.ValueString())
 	}
 
 	if !plan.AuthType.IsNull() && !plan.AuthType.IsUnknown() {
@@ -519,6 +521,11 @@ func (r *monitorResource) buildStateAfterCreate(
 	plan.Name = types.StringValue(unescapeHTML(api.Name))
 	plan.URL = types.StringValue(unescapeHTML(api.URL))
 	plan.Status = types.StringValue(api.Status)
+	if strings.ToUpper(plan.Type.ValueString()) == MonitorTypeHEARTBEAT {
+		plan.HeartbeatURL = types.StringValue(api.APIKey)
+	} else {
+		plan.HeartbeatURL = types.StringNull()
+	}
 	if !plan.IsPaused.IsNull() && !plan.IsPaused.IsUnknown() {
 		plan.IsPaused = types.BoolValue(isMonitorPausedStatus(api.Status))
 	} else {

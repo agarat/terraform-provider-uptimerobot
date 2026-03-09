@@ -41,6 +41,7 @@ type monitorResourceModel struct {
 	RegionalData             types.String         `tfsdk:"regional_data"`
 	CheckSSLErrors           types.Bool           `tfsdk:"check_ssl_errors"`
 	Config                   types.Object         `tfsdk:"config"`
+	HeartbeatURL             types.String         `tfsdk:"heartbeat_url"`
 }
 
 type alertContactTF struct {

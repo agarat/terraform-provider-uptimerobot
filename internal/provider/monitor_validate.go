@@ -91,14 +91,29 @@ func validateURL(
 	data *monitorResourceModel,
 	resp *resource.ValidateConfigResponse,
 ) {
-	if data.URL.IsNull() || data.URL.IsUnknown() {
+	if monitorType == MonitorTypeHEARTBEAT {
+		// url must not be set for heartbeat monitors; UptimeRobot generates it automatically.
+		if !data.URL.IsNull() && !data.URL.IsUnknown() && data.URL.ValueString() != "" {
+			resp.Diagnostics.AddAttributeError(
+				path.Root("url"),
+				"url must not be set for HEARTBEAT monitors",
+				"UptimeRobot generates the heartbeat endpoint automatically. Remove url from the config and use the heartbeat_url output attribute instead.",
+			)
+		}
+		return
+	}
+
+	// For all non-HEARTBEAT types, url is required.
+	if data.URL.IsNull() || data.URL.IsUnknown() || strings.TrimSpace(data.URL.ValueString()) == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("url"),
+			"url is required",
+			"url must be set for all monitor types except HEARTBEAT.",
+		)
 		return
 	}
 
 	raw := strings.TrimSpace(data.URL.ValueString())
-	if raw == "" {
-		return
-	}
 
 	switch monitorType {
 	case MonitorTypeHTTP, MonitorTypeKEYWORD, MonitorTypeAPI:

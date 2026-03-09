@@ -1365,3 +1365,215 @@ func upgradeMonitorFromV4(ctx context.Context, prior monitorV4Model) (monitorRes
 
 	return up, diags
 }
+
+// V5 -> V6: Added heartbeat_url (computed) and made url optional+computed.
+
+type monitorV5Model struct {
+	Type                     types.String         `tfsdk:"type"`
+	Interval                 types.Int64          `tfsdk:"interval"`
+	SSLExpirationReminder    types.Bool           `tfsdk:"ssl_expiration_reminder"`
+	DomainExpirationReminder types.Bool           `tfsdk:"domain_expiration_reminder"`
+	FollowRedirections       types.Bool           `tfsdk:"follow_redirections"`
+	AuthType                 types.String         `tfsdk:"auth_type"`
+	HTTPUsername             types.String         `tfsdk:"http_username"`
+	HTTPPassword             types.String         `tfsdk:"http_password"`
+	CustomHTTPHeaders        types.Map            `tfsdk:"custom_http_headers"`
+	HTTPMethodType           types.String         `tfsdk:"http_method_type"`
+	SuccessHTTPResponseCodes types.Set            `tfsdk:"success_http_response_codes"`
+	Timeout                  types.Int64          `tfsdk:"timeout"`
+	PostValueType            types.String         `tfsdk:"post_value_type"`
+	PostValueData            jsontypes.Normalized `tfsdk:"post_value_data"`
+	PostValueKV              types.Map            `tfsdk:"post_value_kv"`
+	Port                     types.Int64          `tfsdk:"port"`
+	GracePeriod              types.Int64          `tfsdk:"grace_period"`
+	KeywordValue             types.String         `tfsdk:"keyword_value"`
+	KeywordCaseType          types.String         `tfsdk:"keyword_case_type"`
+	KeywordType              types.String         `tfsdk:"keyword_type"`
+	MaintenanceWindowIDs     types.Set            `tfsdk:"maintenance_window_ids"`
+	ID                       types.String         `tfsdk:"id"`
+	Name                     types.String         `tfsdk:"name"`
+	IsPaused                 types.Bool           `tfsdk:"is_paused"`
+	Status                   types.String         `tfsdk:"status"`
+	URL                      types.String         `tfsdk:"url"`
+	GroupID                  types.Int64          `tfsdk:"group_id"`
+	Tags                     types.Set            `tfsdk:"tags"`
+	AssignedAlertContacts    types.Set            `tfsdk:"assigned_alert_contacts"`
+	ResponseTimeThreshold    types.Int64          `tfsdk:"response_time_threshold"`
+	RegionalData             types.String         `tfsdk:"regional_data"`
+	CheckSSLErrors           types.Bool           `tfsdk:"check_ssl_errors"`
+	Config                   types.Object         `tfsdk:"config"`
+}
+
+func priorSchemaV5() *schema.Schema {
+	return &schema.Schema{
+		Version:     5,
+		Description: "Manages an UptimeRobot monitor (prior v5).",
+		Attributes: map[string]schema.Attribute{
+			"type":                       schema.StringAttribute{Required: true},
+			"interval":                   schema.Int64Attribute{Required: true},
+			"ssl_expiration_reminder":    schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+			"domain_expiration_reminder": schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+			"follow_redirections":        schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+			"auth_type":                  schema.StringAttribute{Optional: true, Computed: true, Default: stringdefault.StaticString("HTTP_BASIC")},
+			"http_username":              schema.StringAttribute{Optional: true},
+			"http_password":              schema.StringAttribute{Optional: true, Sensitive: true},
+			"custom_http_headers":        schema.MapAttribute{Optional: true, ElementType: types.StringType},
+			"http_method_type":           schema.StringAttribute{Optional: true, Computed: true},
+			"success_http_response_codes": schema.SetAttribute{
+				Optional:    true,
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"timeout":           schema.Int64Attribute{Optional: true, Computed: true},
+			"post_value_type":   schema.StringAttribute{Computed: true},
+			"post_value_data":   schema.StringAttribute{Optional: true, CustomType: jsontypes.NormalizedType{}},
+			"post_value_kv":     schema.MapAttribute{Optional: true, ElementType: types.StringType},
+			"port":              schema.Int64Attribute{Optional: true},
+			"grace_period":      schema.Int64Attribute{Optional: true},
+			"keyword_value":     schema.StringAttribute{Optional: true},
+			"keyword_case_type": schema.StringAttribute{Optional: true},
+			"keyword_type":      schema.StringAttribute{Optional: true},
+			"maintenance_window_ids": schema.SetAttribute{
+				Optional:    true,
+				ElementType: types.Int64Type,
+			},
+			"id":       schema.StringAttribute{Computed: true},
+			"name":     schema.StringAttribute{Required: true},
+			"is_paused": schema.BoolAttribute{Optional: true},
+			"status":   schema.StringAttribute{Computed: true},
+			"url":      schema.StringAttribute{Required: true},
+			"group_id": schema.Int64Attribute{Optional: true, Computed: true},
+			"tags": schema.SetAttribute{
+				Optional:    true,
+				Computed:    true,
+				ElementType: types.StringType,
+			},
+			"assigned_alert_contacts": schema.SetNestedAttribute{
+				Optional: true,
+				NestedObject: schema.NestedAttributeObject{
+					Attributes: map[string]schema.Attribute{
+						"alert_contact_id": schema.StringAttribute{Required: true},
+						"threshold":        schema.Int64Attribute{Required: true},
+						"recurrence":       schema.Int64Attribute{Required: true},
+					},
+				},
+			},
+			"response_time_threshold": schema.Int64Attribute{Optional: true},
+			"regional_data":           schema.StringAttribute{Optional: true},
+			"check_ssl_errors":        schema.BoolAttribute{Optional: true, Computed: true, Default: booldefault.StaticBool(false)},
+			"config": schema.SingleNestedAttribute{
+				Optional: true,
+				Computed: true,
+				Attributes: map[string]schema.Attribute{
+					"ssl_expiration_period_days": schema.SetAttribute{
+						Optional:    true,
+						Computed:    true,
+						ElementType: types.Int64Type,
+						Validators: []validator.Set{
+							setvalidator.SizeAtMost(10),
+							setvalidator.ValueInt64sAre(int64validator.Between(0, 365)),
+						},
+					},
+					"dns_records": schema.SingleNestedAttribute{
+						Optional: true,
+						Computed: true,
+						Attributes: map[string]schema.Attribute{
+							"a":      schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"aaaa":   schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"cname":  schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"mx":     schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"ns":     schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"txt":    schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"srv":    schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"ptr":    schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"soa":    schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"spf":    schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"dnskey": schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"ds":     schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"nsec":   schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+							"nsec3":  schema.SetAttribute{ElementType: types.StringType, Optional: true, Computed: true},
+						},
+					},
+					"api_assertions": schema.SingleNestedAttribute{
+						Optional: true,
+						Computed: true,
+						Attributes: map[string]schema.Attribute{
+							"logic": schema.StringAttribute{Optional: true, Computed: true},
+							"checks": schema.ListNestedAttribute{
+								Optional: true,
+								Computed: true,
+								NestedObject: schema.NestedAttributeObject{
+									Attributes: map[string]schema.Attribute{
+										"property":   schema.StringAttribute{Required: true},
+										"comparison": schema.StringAttribute{Required: true},
+										"target":     schema.StringAttribute{Optional: true, CustomType: jsontypes.NormalizedType{}},
+									},
+								},
+							},
+						},
+					},
+					"udp": schema.SingleNestedAttribute{
+						Optional: true,
+						Computed: true,
+						Attributes: map[string]schema.Attribute{
+							"payload":               schema.StringAttribute{Optional: true, Computed: true},
+							"packet_loss_threshold": schema.Int64Attribute{Optional: true, Computed: true},
+						},
+					},
+					"ip_version": schema.StringAttribute{
+						Optional: true,
+						Computed: true,
+						PlanModifiers: []planmodifier.String{
+							stringplanmodifier.UseStateForUnknown(),
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func upgradeMonitorFromV5(_ context.Context, prior monitorV5Model) (monitorResourceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	up := monitorResourceModel{
+		Type:                     prior.Type,
+		Interval:                 prior.Interval,
+		SSLExpirationReminder:    prior.SSLExpirationReminder,
+		DomainExpirationReminder: prior.DomainExpirationReminder,
+		FollowRedirections:       prior.FollowRedirections,
+		AuthType:                 prior.AuthType,
+		HTTPUsername:             prior.HTTPUsername,
+		HTTPPassword:             prior.HTTPPassword,
+		CustomHTTPHeaders:        prior.CustomHTTPHeaders,
+		HTTPMethodType:           prior.HTTPMethodType,
+		SuccessHTTPResponseCodes: prior.SuccessHTTPResponseCodes,
+		Timeout:                  prior.Timeout,
+		PostValueType:            prior.PostValueType,
+		PostValueData:            prior.PostValueData,
+		PostValueKV:              prior.PostValueKV,
+		Port:                     prior.Port,
+		GracePeriod:              prior.GracePeriod,
+		KeywordValue:             prior.KeywordValue,
+		KeywordCaseType:          prior.KeywordCaseType,
+		KeywordType:              prior.KeywordType,
+		MaintenanceWindowIDs:     prior.MaintenanceWindowIDs,
+		ID:                       prior.ID,
+		Name:                     prior.Name,
+		IsPaused:                 prior.IsPaused,
+		Status:                   prior.Status,
+		URL:                      prior.URL,
+		GroupID:                  prior.GroupID,
+		Tags:                     prior.Tags,
+		AssignedAlertContacts:    prior.AssignedAlertContacts,
+		ResponseTimeThreshold:    prior.ResponseTimeThreshold,
+		RegionalData:             prior.RegionalData,
+		CheckSSLErrors:           prior.CheckSSLErrors,
+		Config:                   prior.Config,
+		// New in V6: heartbeat_url is computed; initialize as null for existing resources.
+		// It will be populated on the next refresh via the API's apiKey field.
+		HeartbeatURL: types.StringNull(),
+	}
+
+	return up, diags
+}

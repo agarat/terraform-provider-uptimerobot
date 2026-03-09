@@ -221,6 +221,11 @@ func readApplyIdentity(state *monitorResourceModel, m *client.Monitor) {
 	state.URL = types.StringValue(unescapeHTML(m.URL))
 	state.ID = types.StringValue(strconv.FormatInt(m.ID, 10))
 	state.Status = types.StringValue(m.Status)
+	if strings.ToUpper(state.Type.ValueString()) == MonitorTypeHEARTBEAT {
+		state.HeartbeatURL = types.StringValue(m.APIKey)
+	} else {
+		state.HeartbeatURL = types.StringNull()
+	}
 }
 
 func readApplyPausedState(state *monitorResourceModel, m *client.Monitor, isImport bool) {
