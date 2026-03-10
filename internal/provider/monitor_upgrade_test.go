@@ -369,3 +369,68 @@ func TestUpgradeFromV3_Config_WithSSLDays(t *testing.T) {
 	require.True(t, ok, "udp should be types.Object")
 	require.True(t, udp.IsNull(), "udp should be null")
 }
+
+func TestUpgradeFromV5_PreservesFieldsAndNullsHeartbeatURL(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	prior := monitorV5Model{
+		Type:                     types.StringValue("HTTP"),
+		Name:                     types.StringValue("my monitor"),
+		URL:                      types.StringValue("https://example.com"),
+		Interval:                 types.Int64Value(60),
+		ID:                       types.StringValue("123"),
+		Status:                   types.StringValue("up"),
+		Tags:                     types.SetValueMust(types.StringType, []attr.Value{}),
+		MaintenanceWindowIDs:     types.SetValueMust(types.Int64Type, []attr.Value{}),
+		AssignedAlertContacts:    types.SetNull(alertContactObjectType()),
+		Config:                   types.ObjectNull(configObjectType().AttrTypes),
+		SSLExpirationReminder:    types.BoolValue(false),
+		DomainExpirationReminder: types.BoolValue(false),
+		FollowRedirections:       types.BoolValue(false),
+		CheckSSLErrors:           types.BoolValue(false),
+		AuthType:                 types.StringValue("NONE"),
+		SuccessHTTPResponseCodes: types.SetNull(types.StringType),
+	}
+
+	up, diags := upgradeMonitorFromV5(ctx, prior)
+	require.False(t, diags.HasError(), "unexpected diags: %+v", diags)
+
+	require.Equal(t, "https://example.com", up.URL.ValueString(), "url should be preserved")
+	require.Equal(t, "my monitor", up.Name.ValueString(), "name should be preserved")
+	require.Equal(t, "HTTP", up.Type.ValueString(), "type should be preserved")
+	require.True(t, up.HeartbeatURL.IsNull(), "heartbeat_url should be null after upgrade")
+}
+
+func TestUpgradeFromV5_HeartbeatMonitor_HeartbeatURLIsNull(t *testing.T) {
+	t.Parallel()
+	ctx := context.Background()
+
+	prior := monitorV5Model{
+		Type:                     types.StringValue("HEARTBEAT"),
+		Name:                     types.StringValue("my heartbeat"),
+		URL:                      types.StringValue("https://heartbeat.uptimerobot.com/abc123"),
+		Interval:                 types.Int64Value(60),
+		ID:                       types.StringValue("456"),
+		Status:                   types.StringValue("up"),
+		GracePeriod:              types.Int64Value(300),
+		Tags:                     types.SetValueMust(types.StringType, []attr.Value{}),
+		MaintenanceWindowIDs:     types.SetValueMust(types.Int64Type, []attr.Value{}),
+		AssignedAlertContacts:    types.SetNull(alertContactObjectType()),
+		Config:                   types.ObjectNull(configObjectType().AttrTypes),
+		SSLExpirationReminder:    types.BoolValue(false),
+		DomainExpirationReminder: types.BoolValue(false),
+		FollowRedirections:       types.BoolValue(false),
+		CheckSSLErrors:           types.BoolValue(false),
+		AuthType:                 types.StringValue("NONE"),
+		SuccessHTTPResponseCodes: types.SetNull(types.StringType),
+	}
+
+	up, diags := upgradeMonitorFromV5(ctx, prior)
+	require.False(t, diags.HasError(), "unexpected diags: %+v", diags)
+
+	// heartbeat_url starts as null after upgrade; populated on next refresh via API
+	require.True(t, up.HeartbeatURL.IsNull(), "heartbeat_url should be null after upgrade")
+	require.Equal(t, "HEARTBEAT", up.Type.ValueString())
+	require.Equal(t, int64(300), up.GracePeriod.ValueInt64())
+}

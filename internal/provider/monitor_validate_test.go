@@ -703,3 +703,53 @@ func TestValidateConfigIPVersion_RejectsIPv4OnlyWithIPv6LiteralOnPORT(t *testing
 		t.Fatalf("expected an error for ipv4Only with IPv6 literal on PORT, got: %v", resp.Diagnostics)
 	}
 }
+
+// Heartbeat URL validation tests
+
+func TestValidateURL_Heartbeat_AllowsNullURL(t *testing.T) {
+	resp := &resource.ValidateConfigResponse{}
+	data := &monitorResourceModel{URL: types.StringNull()}
+
+	validateURL(context.TODO(), MonitorTypeHEARTBEAT, data, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("expected no error for HEARTBEAT with null url, got: %v", resp.Diagnostics)
+	}
+}
+
+func TestValidateURL_Heartbeat_AllowsUnknownURL(t *testing.T) {
+	resp := &resource.ValidateConfigResponse{}
+	data := &monitorResourceModel{URL: types.StringUnknown()}
+
+	validateURL(context.TODO(), MonitorTypeHEARTBEAT, data, resp)
+
+	if resp.Diagnostics.HasError() {
+		t.Fatalf("expected no error for HEARTBEAT with unknown url, got: %v", resp.Diagnostics)
+	}
+}
+
+func TestValidateURL_Heartbeat_RejectsURLWhenSet(t *testing.T) {
+	resp := &resource.ValidateConfigResponse{}
+	data := &monitorResourceModel{URL: types.StringValue("https://example.com")}
+
+	validateURL(context.TODO(), MonitorTypeHEARTBEAT, data, resp)
+
+	if !resp.Diagnostics.HasError() {
+		t.Fatalf("expected an error when url is set for HEARTBEAT monitor, got: %v", resp.Diagnostics)
+	}
+}
+
+func TestValidateURL_NonHeartbeat_RequiresURL(t *testing.T) {
+	for _, monType := range []string{MonitorTypeHTTP, MonitorTypePING, MonitorTypePORT, MonitorTypeDNS, MonitorTypeKEYWORD} {
+		t.Run(monType, func(t *testing.T) {
+			resp := &resource.ValidateConfigResponse{}
+			data := &monitorResourceModel{URL: types.StringNull()}
+
+			validateURL(context.TODO(), monType, data, resp)
+
+			if !resp.Diagnostics.HasError() {
+				t.Fatalf("expected an error when url is null for %s monitor", monType)
+			}
+		})
+	}
+}
