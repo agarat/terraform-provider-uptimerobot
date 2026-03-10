@@ -20,3 +20,4 @@ test-uptimerobot/
 bin/
 claude.md
 
+terraform-provider-uptimerobot_v*
