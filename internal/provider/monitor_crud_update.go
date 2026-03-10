@@ -517,7 +517,7 @@ func applyUpdatedMonitorToState(
 	out.URL = types.StringValue(unescapeHTML(m.URL))
 	out.Status = prev.Status
 	if strings.ToUpper(plan.Type.ValueString()) == MonitorTypeHEARTBEAT {
-		out.HeartbeatURL = types.StringValue(resolveHeartbeatURL(m.APIKey, m.URL))
+		out.HeartbeatURL = types.StringValue(resolveHeartbeatURL(m.APIKey, m.URL, m.ID))
 	} else {
 		out.HeartbeatURL = types.StringNull()
 	}

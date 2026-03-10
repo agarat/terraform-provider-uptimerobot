@@ -2,6 +2,7 @@ package provider
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -217,9 +218,9 @@ func readApplyKeywordAndPort(state *monitorResourceModel, m *client.Monitor, isI
 }
 
 // resolveHeartbeatURL returns the full heartbeat endpoint URL.
-// The API returns the path (e.g. "m802519561-abc123") in apiKey or url;
-// we just need to prefix with HeartbeatBaseURL.
-func resolveHeartbeatURL(apiKey, url string) string {
+// Format: https://heartbeat.uptimerobot.com/m{ID}-{token}
+// The API returns only the token in apiKey or url (without the m{ID}- prefix).
+func resolveHeartbeatURL(apiKey, url string, id int64) string {
 	key := apiKey
 	if key == "" {
 		key = url
@@ -227,7 +228,7 @@ func resolveHeartbeatURL(apiKey, url string) string {
 	if strings.HasPrefix(key, "http") {
 		return key
 	}
-	return HeartbeatBaseURL + key
+	return fmt.Sprintf("%sm%d-%s", HeartbeatBaseURL, id, key)
 }
 
 func readApplyIdentity(state *monitorResourceModel, m *client.Monitor) {
@@ -236,7 +237,7 @@ func readApplyIdentity(state *monitorResourceModel, m *client.Monitor) {
 	state.ID = types.StringValue(strconv.FormatInt(m.ID, 10))
 	state.Status = types.StringValue(m.Status)
 	if strings.ToUpper(state.Type.ValueString()) == MonitorTypeHEARTBEAT {
-		state.HeartbeatURL = types.StringValue(resolveHeartbeatURL(m.APIKey, m.URL))
+		state.HeartbeatURL = types.StringValue(resolveHeartbeatURL(m.APIKey, m.URL, m.ID))
 	} else {
 		state.HeartbeatURL = types.StringNull()
 	}
