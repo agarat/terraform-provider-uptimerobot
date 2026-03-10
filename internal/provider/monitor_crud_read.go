@@ -217,17 +217,17 @@ func readApplyKeywordAndPort(state *monitorResourceModel, m *client.Monitor, isI
 }
 
 // resolveHeartbeatURL returns the full heartbeat endpoint URL.
-// The API may return the token in apiKey or in the url field; if the value is
-// not already a full URL we prefix it with HeartbeatBaseURL.
+// The API returns the path (e.g. "m802519561-abc123") in apiKey or url;
+// we just need to prefix with HeartbeatBaseURL.
 func resolveHeartbeatURL(apiKey, url string) string {
 	key := apiKey
 	if key == "" {
 		key = url
 	}
-	if !strings.HasPrefix(key, "http") {
-		return HeartbeatBaseURL + key
+	if strings.HasPrefix(key, "http") {
+		return key
 	}
-	return key
+	return HeartbeatBaseURL + key
 }
 
 func readApplyIdentity(state *monitorResourceModel, m *client.Monitor) {
