@@ -36,6 +36,7 @@ const (
 	MonitorTypePING      = "PING"
 	MonitorTypePORT      = "PORT"
 	MonitorTypeHEARTBEAT = "HEARTBEAT"
+	HeartbeatBaseURL     = "https://heartbeat.uptimerobot.com/"
 	MonitorTypeDNS       = "DNS"
 	MonitorTypeAPI       = "API"
 	MonitorTypeUDP       = "UDP"

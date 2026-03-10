@@ -522,7 +522,7 @@ func (r *monitorResource) buildStateAfterCreate(
 	plan.URL = types.StringValue(unescapeHTML(api.URL))
 	plan.Status = types.StringValue(api.Status)
 	if strings.ToUpper(plan.Type.ValueString()) == MonitorTypeHEARTBEAT {
-		plan.HeartbeatURL = types.StringValue(api.APIKey)
+		plan.HeartbeatURL = types.StringValue(resolveHeartbeatURL(api.APIKey, api.URL))
 	} else {
 		plan.HeartbeatURL = types.StringNull()
 	}

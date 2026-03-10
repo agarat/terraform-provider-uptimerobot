@@ -216,13 +216,27 @@ func readApplyKeywordAndPort(state *monitorResourceModel, m *client.Monitor, isI
 	}
 }
 
+// resolveHeartbeatURL returns the full heartbeat endpoint URL.
+// The API may return the token in apiKey or in the url field; if the value is
+// not already a full URL we prefix it with HeartbeatBaseURL.
+func resolveHeartbeatURL(apiKey, url string) string {
+	key := apiKey
+	if key == "" {
+		key = url
+	}
+	if !strings.HasPrefix(key, "http") {
+		return HeartbeatBaseURL + key
+	}
+	return key
+}
+
 func readApplyIdentity(state *monitorResourceModel, m *client.Monitor) {
 	state.Name = types.StringValue(unescapeHTML(m.Name))
 	state.URL = types.StringValue(unescapeHTML(m.URL))
 	state.ID = types.StringValue(strconv.FormatInt(m.ID, 10))
 	state.Status = types.StringValue(m.Status)
 	if strings.ToUpper(state.Type.ValueString()) == MonitorTypeHEARTBEAT {
-		state.HeartbeatURL = types.StringValue(m.APIKey)
+		state.HeartbeatURL = types.StringValue(resolveHeartbeatURL(m.APIKey, m.URL))
 	} else {
 		state.HeartbeatURL = types.StringNull()
 	}
