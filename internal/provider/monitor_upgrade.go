@@ -1442,7 +1442,7 @@ func priorSchemaV5() *schema.Schema {
 			"is_paused": schema.BoolAttribute{Optional: true},
 			"status":    schema.StringAttribute{Computed: true},
 			"url":       schema.StringAttribute{Required: true},
-			"group_id": schema.Int64Attribute{Optional: true, Computed: true},
+			"group_id":  schema.Int64Attribute{Optional: true, Computed: true},
 			"tags": schema.SetAttribute{
 				Optional:    true,
 				Computed:    true,
