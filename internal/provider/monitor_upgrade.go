@@ -1437,12 +1437,12 @@ func priorSchemaV5() *schema.Schema {
 				Optional:    true,
 				ElementType: types.Int64Type,
 			},
-			"id":       schema.StringAttribute{Computed: true},
-			"name":     schema.StringAttribute{Required: true},
+			"id":        schema.StringAttribute{Computed: true},
+			"name":      schema.StringAttribute{Required: true},
 			"is_paused": schema.BoolAttribute{Optional: true},
-			"status":   schema.StringAttribute{Computed: true},
-			"url":      schema.StringAttribute{Required: true},
-			"group_id": schema.Int64Attribute{Optional: true, Computed: true},
+			"status":    schema.StringAttribute{Computed: true},
+			"url":       schema.StringAttribute{Required: true},
+			"group_id":  schema.Int64Attribute{Optional: true, Computed: true},
 			"tags": schema.SetAttribute{
 				Optional:    true,
 				Computed:    true,
@@ -1533,9 +1533,7 @@ func priorSchemaV5() *schema.Schema {
 	}
 }
 
-func upgradeMonitorFromV5(_ context.Context, prior monitorV5Model) (monitorResourceModel, diag.Diagnostics) {
-	var diags diag.Diagnostics
-
+func upgradeMonitorFromV5(_ context.Context, prior monitorV5Model) monitorResourceModel {
 	up := monitorResourceModel{
 		Type:                     prior.Type,
 		Interval:                 prior.Interval,
@@ -1575,5 +1573,5 @@ func upgradeMonitorFromV5(_ context.Context, prior monitorV5Model) (monitorResou
 		HeartbeatURL: types.StringNull(),
 	}
 
-	return up, diags
+	return up
 }

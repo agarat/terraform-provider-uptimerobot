@@ -393,8 +393,7 @@ func TestUpgradeFromV5_PreservesFieldsAndNullsHeartbeatURL(t *testing.T) {
 		SuccessHTTPResponseCodes: types.SetNull(types.StringType),
 	}
 
-	up, diags := upgradeMonitorFromV5(ctx, prior)
-	require.False(t, diags.HasError(), "unexpected diags: %+v", diags)
+	up := upgradeMonitorFromV5(ctx, prior)
 
 	require.Equal(t, "https://example.com", up.URL.ValueString(), "url should be preserved")
 	require.Equal(t, "my monitor", up.Name.ValueString(), "name should be preserved")
@@ -426,8 +425,7 @@ func TestUpgradeFromV5_HeartbeatMonitor_HeartbeatURLIsNull(t *testing.T) {
 		SuccessHTTPResponseCodes: types.SetNull(types.StringType),
 	}
 
-	up, diags := upgradeMonitorFromV5(ctx, prior)
-	require.False(t, diags.HasError(), "unexpected diags: %+v", diags)
+	up := upgradeMonitorFromV5(ctx, prior)
 
 	// heartbeat_url starts as null after upgrade; populated on next refresh via API
 	require.True(t, up.HeartbeatURL.IsNull(), "heartbeat_url should be null after upgrade")
